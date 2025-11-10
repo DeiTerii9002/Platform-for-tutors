@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Конспекты - School Help</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial Rounded MT Bold', 'Arial', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(to bottom, #FFFFFF, #E59A59B2);
+            color: #333;
+            line-height: 1.4;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            flex: 1;
+        }
+
+        header {
+            width: 100%;
+            background: linear-gradient(to bottom, #482C2C, #B56F5EB2 70%);
+            padding: 30px 0;
+            margin-bottom: 20px;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .logo {
+            font-size: 48px;
+            font-weight: 900;
+            display: flex;
+            flex-direction: column;
+            line-height: 0.75;
+        }
+
+        .school {
+            color: #FF8C00;
+            -webkit-text-stroke: 2px black;
+            text-stroke: 2px black;
+            letter-spacing: 2px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.4);
+            font-weight: 900;
+            padding: 5px 0;
+            text-transform: uppercase;
+        }
+
+        .help {
+            color: white;
+            -webkit-text-stroke: 2px black;
+            text-stroke: 2px black;
+            letter-spacing: 2px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.4);
+            font-weight: 900;
+            padding: 5px 0;
+            text-transform: uppercase;
+            margin-left: -2px;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 30px;
+        }
+
+        .nav-item {
+            font-size: 18px;
+            color: black;
+            text-decoration: none;
+            padding: 8px 0;
+            position: relative;
+            font-weight: 600;
+        }
+
+        .nav-item:hover {
+            color: #333;
+        }
+
+        .nav-item.active {
+            color: #FF8C00;
+            font-weight: 700;
+        }
+
+        .page-title {
+            text-align: center;
+            font-size: 36px;
+            color: #333;
+            margin: 30px 0;
+            font-weight: 700;
+        }
+
+        .controls {
+            max-width: 1200px;
+            margin: 0 auto 30px;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            position: relative;
+        }
+
+        .filter-container {
+            position: relative;
+        }
+
+        .filter-btn {
+            background-color: #f0f0f0;
+            color: #333;
+            border: 1px solid #ccc;
+            padding: 8px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-btn:hover {
+            background-color: #e0e0e0;
+        }
+
+        .filter-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            z-index: 1000;
+            width: 280px;
+            display: none;
+            margin-top: 5px;
+        }
+
+        .filter-dropdown.show {
+            display: block;
+        }
+
+        .filter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .filter-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .close-filters {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .filter-section {
+            margin-bottom: 15px;
+        }
+
+        .filter-section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .filter-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .filter-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-option input {
+            margin: 0;
+        }
+
+        .filter-option label {
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .apply-filters, .reset-filters {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            flex: 1;
+        }
+
+        .apply-filters {
+            background-color: #FF8C00;
+            color: white;
+        }
+
+        .apply-filters:hover {
+            background-color: #e67e00;
+        }
+
+        .reset-filters {
+            background-color: #f0f0f0;
+            color: #333;
+            border: 1px solid #ccc;
+        }
+
+        .reset-filters:hover {
+            background-color: #e0e0e0;
+        }
+
+        .search-container {
+            display: flex;
+            align-items: center;
+        }
+
+        .search-input {
+            padding: 10px 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px 0 0 8px;
+            font-size: 16px;
+            width: 300px;
+        }
+
+        .search-btn {
+            background: #f0f0f0;
+            border: 1px solid #ccc;
+            border-left: none;
+            padding: 10px 20px;
+            border-radius: 0 8px 8px 0;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .conspeсts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+            width: 95%;
+            margin: 0 auto;
+        }
+
+        .conspect-card {
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            min-height: 250px;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .conspect-card.hidden {
+            display: none;
+        }
+
+        .conspect-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .subject-badge {
+            background: #FF8C00;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+
+        .conspect-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .conspect-description {
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.5;
+            flex-grow: 1;
+        }
+
+        .conspect-meta {
+            display: flex;
+            justify-content: space-between;
+            color: #888;
+            font-size: 14px;
+            margin-top: auto;
+        }
+
+        .watch-btn {
+            background-color: #FF8C00;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            margin-top: 15px;
+            transition: background-color 0.3s;
+        }
+
+        .watch-btn:hover {
+            background-color: #e67e00;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+            color: #666;
+            grid-column: 1 / -1;
+            display: none;
+        }
+
+        .no-results.show {
+            display: block;
+        }
+
+        footer {
+            width: 100%;
+            background-color: #482C2C;
+            color: white;
+            padding: 30px 0;
+            margin-top: 40px;
+        }
+
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 25px;
+        }
+
+        .footer-column h3 {
+            margin-bottom: 15px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .contact-info {
+            font-size: 15px;
+            color: #ddd;
+        }
+
+        hr {
+            border: none;
+            border-top: 2px solid #ddd;
+            margin: 30px 0;
+        }
+
+        @media (max-width: 768px) {
+            .conspeсts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .footer-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                gap: 25px;
+            }
+            
+            .nav-menu {
+                width: 100%;
+                justify-content: space-between;
+            }
+            
+            .controls {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .search-input {
+                width: 100%;
+            }
+            
+            .conspect-card {
+                width: 100%;
+            }
+            
+            .logo {
+                font-size: 40px;
+            }
+            
+            .help {
+                margin-left: 0px;
+            }
+            
+            .page-title {
+                font-size: 28px;
+            }
+            
+            .filter-dropdown {
+                width: 100%;
+                left: 0;
+                right: 0;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .footer-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav-menu {
+                flex-direction: column;
+                gap: 12px;
+                text-align: center;
+            }
+            
+            .logo {
+                font-size: 36px;
+            }
+            
+            .help {
+                margin-left: 2px;
+            }
+            
+            .conspect-card {
+                padding: 20px;
+                min-height: 220px;
+            }
+            
+            .page-title {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <span class="school">School</span>
+                <span class="help">Help</span>
+            </div>
+            <nav class="nav-menu">
+                <a href="rep1.html" class="nav-item">Главная</a>
+                <a href="about.html" class="nav-item">О нас</a>
+                <a href="conspects.html" class="nav-item active">Конспекты</a>
+                <a href="video.html" class="nav-item">Видеоуроки</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1 class="page-title">Конспекты</h1>
+
+        <div class="controls">
+            <div class="filter-container">
+                <button class="filter-btn" id="filterBtn">
+                    <span>Фильтры</span>
+                    <span>▼</span>
+                </button>
+                <div class="filter-dropdown" id="filterDropdown">
+                    <div class="filter-header">
+                        <div class="filter-title">Фильтры</div>
+                        <button class="close-filters" id="closeFilters">×</button>
+                    </div>
+                    
+                    <div class="filter-section">
+                        <div class="filter-section-title">Предметы</div>
+                        <div class="filter-options">
+                            <div class="filter-option">
+                                <input type="checkbox" id="math" name="subject" value="Математика" checked>
+                                <label for="math">Математика</label>
+                            </div>
+                            <div class="filter-option">
+                                <input type="checkbox" id="physics" name="subject" value="Физика" checked>
+                                <label for="physics">Физика</label>
+                            </div>
+                            <div class="filter-option">
+                                <input type="checkbox" id="chemistry" name="subject" value="Химия" checked>
+                                <label for="chemistry">Химия</label>
+                            </div>
+                            <div class="filter-option">
+                                <input type="checkbox" id="biology" name="subject" value="Биология" checked>
+                                <label for="biology">Биология</label>
+                            </div>
+                            <div class="filter-option">
+                                <input type="checkbox" id="history" name="subject" value="История" checked>
+                                <label for="history">История</label>
+                            </div>
+                            <div class="filter-option">
+                                <input type="checkbox" id="literature" name="subject" value="Литература" checked>
+                                <label for="literature">Литература</label>
+                            </div>
+                            <div class="filter-option">
+                                <input type="checkbox" id="geography" name="subject" value="География" checked>
+                                <label for="geography">География</label>
+                            </div>
+                            <div class="filter-option">
+                                <input type="checkbox" id="informatics" name="subject" value="Информатика" checked>
+                                <label for="informatics">Информатика</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-section">
+                        <div class="filter-section-title">Количество страниц</div>
+                        <div class="filter-options">
+                            <div class="filter-option">
+                                <input type="checkbox" id="pages-short" name="pages" value="short" checked>
+                                <label for="pages-short">До 15 страниц</label>
+                            </div>
+                            <div class="filter-option">
+                                <input type="checkbox" id="pages-medium" name="pages" value="medium" checked>
+                                <label for="pages-medium">15-25 страниц</label>
+                            </div>
+                            <div class="filter-option">
+                                <input type="checkbox" id="pages-long" name="pages" value="long" checked>
+                                <label for="pages-long">Более 25 страниц</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-section">
+                        <div class="filter-section-title">Рейтинг</div>
+                        <div class="filter-options">
+                            <div class="filter-option">
+                                <input type="checkbox" id="rating4" name="rating" value="4" checked>
+                                <label for="rating4">4.0 и выше</label>
+                            </div>
+                            <div class="filter-option">
+                                <input type="checkbox" id="rating45" name="rating" value="4.5" checked>
+                                <label for="rating45">4.5 и выше</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-actions">
+                        <button class="apply-filters" id="applyFilters">Применить</button>
+                        <button class="reset-filters" id="resetFilters">Сбросить</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="search-container">
+                <input type="text" class="search-input" id="searchInput" placeholder="Поиск по конспектам...">
+                <button class="search-btn" id="searchBtn">Найти</button>
+            </div>
+        </div>
+
+        <div class="conspeсts-grid" id="conspectsGrid">
+            <div class="conspect-card" data-title="Математика - Алгебра" data-subject="Математика" data-pages="25" data-rating="4.8">
+                <span class="subject-badge">Математика</span>
+                <h3 class="conspect-title">Математика - Алгебра</h3>
+                <p class="conspect-description">Основные понятия алгебры, уравнения, неравенства и функции. Подробное объяснение с примерами.</p>
+                <div class="conspect-meta">
+                    <span>25 страниц</span>
+                    <span>★ 4.8</span>
+                </div>
+                <button class="watch-btn">Читать конспект</button>
+            </div>
+
+            <div class="conspect-card" data-title="Физика - Механика" data-subject="Физика" data-pages="18" data-rating="4.6">
+                <span class="subject-badge">Физика</span>
+                <h3 class="conspect-title">Физика - Механика</h3>
+                <p class="conspect-description">Кинематика, динамика, законы Ньютона. Решение задач и практические примеры.</p>
+                <div class="conspect-meta">
+                    <span>18 страниц</span>
+                    <span>★ 4.6</span>
+                </div>
+                <button class="watch-btn">Читать конспект</button>
+            </div>
+
+            <div class="conspect-card" data-title="История России" data-subject="История" data-pages="32" data-rating="4.9">
+                <span class="subject-badge">История</span>
+                <h3 class="conspect-title">История России</h3>
+                <p class="conspect-description">От древней Руси до современности. Ключевые события и личности.</p>
+                <div class="conspect-meta">
+                    <span>32 страницы</span>
+                    <span>★ 4.9</span>
+                </div>
+                <button class="watch-btn">Читать конспект</button>
+            </div>
+
+            <div class="conspect-card" data-title="Химия - Органическая" data-subject="Химия" data-pages="22" data-rating="4.7">
+                <span class="subject-badge">Химия</span>
+                <h3 class="conspect-title">Химия - Органическая</h3>
+                <p class="conspect-description">Углеводороды, спирты, кислоты. Строение и свойства органических соединений.</p>
+                <div class="conspect-meta">
+                    <span>22 страницы</span>
+                    <span>★ 4.7</span>
+                </div>
+                <button class="watch-btn">Читать конспект</button>
+            </div>
+
+            <div class="conspect-card" data-title="Биология - Клетка" data-subject="Биология" data-pages="15" data-rating="4.5">
+                <span class="subject-badge">Биология</span>
+                <h3 class="conspect-title">Биология - Клетка</h3>
+                <p class="conspect-description">Строение клетки, органоиды, процессы жизнедеятельности. Наглядные схемы.</p>
+                <div class="conspect-meta">
+                    <span>15 страниц</span>
+                    <span>★ 4.5</span>
+                </div>
+                <button class="watch-btn">Читать конспект</button>
+            </div>
+
+            <div class="conspect-card" data-title="Литература - 19 век" data-subject="Литература" data-pages="28" data-rating="4.8">
+                <span class="subject-badge">Литература</span>
+                <h3 class="conspect-title">Литература - 19 век</h3>
+                <p class="conspect-description">Русская классическая литература. Анализ произведений и биографии авторов.</p>
+                <div class="conspect-meta">
+                    <span>28 страниц</span>
+                    <span>★ 4.8</span>
+                </div>
+                <button class="watch-btn">Читать конспект</button>
+            </div>
+
+            <div class="conspect-card" data-title="География - Климат" data-subject="География" data-pages="20" data-rating="4.4">
+                <span class="subject-badge">География</span>
+                <h3 class="conspect-title">География - Климат</h3>
+                <p class="conspect-description">Климатические пояса, погодные явления, влияние климата на природу и хозяйство.</p>
+                <div class="conspect-meta">
+                    <span>20 страниц</span>
+                    <span>★ 4.4</span>
+                </div>
+                <button class="watch-btn">Читать конспект</button>
+            </div>
+
+            <div class="conspect-card" data-title="Информатика - Программирование" data-subject="Информатика" data-pages="35" data-rating="4.9">
+                <span class="subject-badge">Информатика</span>
+                <h3 class="conspect-title">Информатика - Программирование</h3>
+                <p class="conspect-description">Основы программирования, алгоритмы, структуры данных. Примеры на Python.</p>
+                <div class="conspect-meta">
+                    <span>35 страниц</span>
+                    <span>★ 4.9</span>
+                </div>
+                <button class="watch-btn">Читать конспект</button>
+            </div>
+            
+            <div class="no-results" id="noResults">
+                <p>К сожалению, по вашему запросу ничего не найдено.</p>
+                <p>Попробуйте изменить поисковый запрос или параметры фильтрации.</p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="footer-container">
+            <div class="footer-grid">
+                <div class="footer-column">
+                    <h3>Администратор платформы</h3>
+                    <div class="contact-info">8 (xxx) xxx-xx-xx</div>
+                </div>
+                <div class="footer-column">
+                    <h3>Запуск школы</h3>
+                    <div class="contact-info">8 (xxx) xxx-xx-xx</div>
+                </div>
+                <div class="footer-column">
+                    <h3>Администратор платформы</h3>
+                    <div class="contact-info">8 (xxx) xxx-xx-xx</div>
+                </div>
+                <div class="footer-column">
+                    <h3>По вопросам</h3>
+                    <div class="contact-info">example@mail.ru</div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('searchInput');
+            const searchBtn = document.getElementById('searchBtn');
+            const conspectCards = document.querySelectorAll('.conspect-card');
+            const noResults = document.getElementById('noResults');
+            
+            const filterBtn = document.getElementById('filterBtn');
+            const filterDropdown = document.getElementById('filterDropdown');
+            const closeFilters = document.getElementById('closeFilters');
+            const applyFilters = document.getElementById('applyFilters');
+            const resetFilters = document.getElementById('resetFilters');
+            
+            let currentFilters = {
+                subjects: ['Математика', 'Физика', 'Химия', 'Биология', 'История', 'Литература', 'География', 'Информатика'],
+                pages: ['short', 'medium', 'long'],
+                ratings: ['4', '4.5']
+            };
+            
+            filterBtn.addEventListener('click', function() {
+                filterDropdown.classList.toggle('show');
+            });
+            
+            closeFilters.addEventListener('click', function() {
+                filterDropdown.classList.remove('show');
+            });
+            
+            document.addEventListener('click', function(event) {
+                if (!filterBtn.contains(event.target) && !filterDropdown.contains(event.target)) {
+                    filterDropdown.classList.remove('show');
+                }
+            });
+            
+            applyFilters.addEventListener('click', function() {
+                const subjectCheckboxes = document.querySelectorAll('input[name="subject"]:checked');
+                currentFilters.subjects = Array.from(subjectCheckboxes).map(cb => cb.value);
+                
+                const pagesCheckboxes = document.querySelectorAll('input[name="pages"]:checked');
+                currentFilters.pages = Array.from(pagesCheckboxes).map(cb => cb.value);
+                
+                const ratingCheckboxes = document.querySelectorAll('input[name="rating"]:checked');
+                currentFilters.ratings = Array.from(ratingCheckboxes).map(cb => cb.value);
+                
+                updateDisplay();
+                
+                filterDropdown.classList.remove('show');
+            });
+            
+            resetFilters.addEventListener('click', function() {
+                document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                    cb.checked = true;
+                });
+                
+                currentFilters = {
+                    subjects: ['Математика', 'Физика', 'Химия', 'Биология', 'История', 'Литература', 'География', 'Информатика'],
+                    pages: ['short', 'medium', 'long'],
+                    ratings: ['4', '4.5']
+                };
+                
+                updateDisplay();
+            });
+            
+            function matchesPagesFilter(pages) {
+                if (currentFilters.pages.includes('short') && pages <= 15) return true;
+                if (currentFilters.pages.includes('medium') && pages > 15 && pages <= 25) return true;
+                if (currentFilters.pages.includes('long') && pages > 25) return true;
+                return false;
+            }
+            
+            function matchesRatingFilter(rating) {
+                if (currentFilters.ratings.includes('4') && rating >= 4.0) return true;
+                if (currentFilters.ratings.includes('4.5') && rating >= 4.5) return true;
+                return false;
+            }
+            
+            function updateDisplay() {
+                const searchTerm = searchInput.value.toLowerCase().trim();
+                let hasResults = false;
+                
+                conspectCards.forEach(card => {
+                    card.classList.remove('hidden');
+                });
+                
+                if (searchTerm || currentFilters.subjects.length < 8 || currentFilters.pages.length < 3 || currentFilters.ratings.length < 2) {
+                    conspectCards.forEach(card => {
+                        const title = card.getAttribute('data-title').toLowerCase();
+                        const subject = card.getAttribute('data-subject');
+                        const pages = parseInt(card.getAttribute('data-pages'));
+                        const rating = parseFloat(card.getAttribute('data-rating'));
+                        
+                        const matchesSearch = !searchTerm || title.includes(searchTerm);
+                        const matchesSubject = currentFilters.subjects.includes(subject);
+                        const matchesPages = matchesPagesFilter(pages);
+                        const matchesRating = matchesRatingFilter(rating);
+                        
+                        if (matchesSearch && matchesSubject && matchesPages && matchesRating) {
+                            card.classList.remove('hidden');
+                            hasResults = true;
+                        } else {
+                            card.classList.add('hidden');
+                        }
+                    });
+                } else {
+                    hasResults = true;
+                }
+                
+                if (hasResults) {
+                    noResults.classList.remove('show');
+                } else {
+                    noResults.classList.add('show');
+                }
+            }
+            
+            searchBtn.addEventListener('click', updateDisplay);
+            
+            searchInput.addEventListener('keyup', function(event) {
+                if (event.key === 'Enter') {
+                    updateDisplay();
+                }
+            });
+            
+            searchInput.addEventListener('input', function() {
+                if (this.value === '') {
+                    updateDisplay();
+                }
+            });
+            
+            updateDisplay();
+        });
+    </script>
+</body>
+</html>
