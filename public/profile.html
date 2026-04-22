@@ -956,76 +956,109 @@
     </footer>
 
     <script>
+        let authToken = localStorage.getItem('token');
         let currentUser = null;
-        let sessions = [];
-        let materials = [];
+        let allUsers = [];
+        let historyData = [];
+        let sessionsData = [];
+        let materialsData = [];
 
-        document.addEventListener('DOMContentLoaded', function() {
-            loadUserData();
-        });
-
-        function loadUserData() {
-            const userData = localStorage.getItem('currentUser');
-            if (!userData) {
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadCurrentUser();
+            if (!currentUser) {
                 window.location.href = 'rep1.html';
                 return;
             }
-
-            currentUser = JSON.parse(userData);
-            
-            sessions = JSON.parse(localStorage.getItem('sessions') || '[]');
-            materials = JSON.parse(localStorage.getItem('materials') || '[]');
-            
+            await loadAllData();
             updateProfileUI();
             updateOverviewTab();
             updateHistoryTab();
             updateSessionsTab();
             updateMaterialsTab();
             updateSettingsTab();
+        });
+
+        async function loadCurrentUser() {
+            if (!authToken) {
+                window.location.href = 'rep1.html';
+                return;
+            }
+            try {
+                const response = await fetch('/api/profile', {
+                    headers: { 'Authorization': authToken }
+                });
+                if (response.ok) {
+                    currentUser = await response.json();
+                } else {
+                    localStorage.removeItem('token');
+                    window.location.href = 'rep1.html';
+                }
+            } catch(e) {
+                console.error(e);
+                window.location.href = 'rep1.html';
+            }
+        }
+
+        async function loadAllData() {
+            try {
+                const [historyRes, sessionsRes, materialsRes, usersRes] = await Promise.all([
+                    fetch('/api/history', { headers: { 'Authorization': authToken } }),
+                    fetch('/api/sessions', { headers: { 'Authorization': authToken } }),
+                    fetch('/api/materials'),
+                    fetch('/api/mentors/rating')
+                ]);
+                if (historyRes.ok) historyData = await historyRes.json();
+                if (sessionsRes.ok) sessionsData = await sessionsRes.json();
+                if (materialsRes.ok) materialsData = await materialsRes.json();
+                if (usersRes.ok) allUsers = await usersRes.json();
+            } catch(e) { console.error(e); }
+        }
+
+        async function loadPoints() {
+            try {
+                const res = await fetch('/api/points', { headers: { 'Authorization': authToken } });
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('totalPoints').textContent = data.points || 0;
+                }
+            } catch(e) {}
         }
 
         function updateProfileUI() {
             document.getElementById('profileName').textContent = currentUser.username;
             document.getElementById('profileAvatar').textContent = currentUser.role === 'mentor' ? '👨‍🏫' : '👨‍🎓';
-            
             const roleBadge = document.getElementById('profileRole');
             roleBadge.textContent = currentUser.role === 'mentor' ? 'Наставник' : 'Ученик';
-            if (currentUser.role === 'mentor') {
-                roleBadge.classList.add('mentor');
-            }
+            if (currentUser.role === 'mentor') roleBadge.classList.add('mentor');
             
-            const points = parseInt(localStorage.getItem(`points_${currentUser.username}`) || '0');
-            document.getElementById('totalPoints').textContent = points;
+            loadPoints();
             
-            const history = JSON.parse(localStorage.getItem(`test_history_${currentUser.username}`) || '[]');
+            const history = historyData || [];
             document.getElementById('testsCount').textContent = history.length;
-            
             if (history.length > 0) {
                 const avg = Math.round(history.reduce((sum, h) => sum + h.score, 0) / history.length);
                 document.getElementById('avgScore').textContent = avg + '%';
             }
-            
             document.getElementById('thanksCount').textContent = currentUser.thanks_count || 0;
             
-            const userSessions = sessions.filter(s => s.student === currentUser.username || s.mentor === currentUser.username);
+            const userSessions = sessionsData.filter(s => s.student_id === currentUser.id || s.mentor_id === currentUser.id);
             document.getElementById('upcomingCount').textContent = userSessions.filter(s => s.status === 'confirmed').length;
         }
 
         function updateOverviewTab() {
-            const history = JSON.parse(localStorage.getItem(`test_history_${currentUser.username}`) || '[]');
-            
+            const history = historyData || [];
             const recentTests = document.getElementById('recentTests');
             if (history.length === 0) {
                 recentTests.innerHTML = '<p style="color: #666;">Вы еще не проходили тесты</p>';
             } else {
-                const lastThree = history.slice(-3).reverse();
+                const lastThree = [...history].slice(-3).reverse();
                 recentTests.innerHTML = lastThree.map(h => `
                     <div style="padding: 10px 0; border-bottom: 1px solid #eee;">
-                        <div style="font-weight: 600;">${h.testTitle}</div>
+                        <div style="font-weight: 600;">${h.test_title}</div>
                         <div style="display: flex; gap: 20px; font-size: 14px; color: #666; flex-wrap: wrap;">
                             <span>Результат: ${h.score}%</span>
-                            <span>+${h.earned} баллов</span>
-                            <span>${new Date(h.date).toLocaleDateString()}</span>
+                            <span>+${h.earned_points} баллов</span>
+                            <span>${new Date(h.completed_at).toLocaleDateString()}</span>
                         </div>
                     </div>
                 `).join('');
@@ -1036,12 +1069,11 @@
                 statistics.innerHTML = '<p style="color: #666;">Нет данных для статистики</p>';
             } else {
                 const best = history.reduce((max, h) => h.score > max.score ? h : max, history[0]);
-                const totalEarned = history.reduce((sum, h) => sum + h.earned, 0);
-                
+                const totalEarned = history.reduce((sum, h) => sum + (h.earned_points || 0), 0);
                 statistics.innerHTML = `
                     <div style="margin-bottom: 15px;">
                         <div style="font-weight: 600;">Лучший результат</div>
-                        <div>${best.testTitle} — ${best.score}%</div>
+                        <div>${best.test_title} — ${best.score}%</div>
                     </div>
                     <div style="margin-bottom: 15px;">
                         <div style="font-weight: 600;">Всего заработано</div>
@@ -1056,56 +1088,47 @@
 
             const achievements = document.getElementById('achievements');
             const achievementsList = [];
-            
             if (history.length >= 1) achievementsList.push('🎯 Первый тест');
             if (history.length >= 5) achievementsList.push('📚 5 тестов');
             if (history.length >= 10) achievementsList.push('🏆 10 тестов');
-            
             const perfect = history.filter(h => h.score === 100).length;
             if (perfect >= 1) achievementsList.push(`💯 ${perfect} идеальных тестов`);
-            
             if (achievementsList.length === 0) {
                 achievements.innerHTML = '<p style="color: #666;">Пройдите тест, чтобы получить достижение</p>';
             } else {
                 achievements.innerHTML = achievementsList.map(a => `<div style="padding: 5px 0;">✓ ${a}</div>`).join('');
             }
 
-            const upcomingSessions = sessions
-                .filter(s => (s.student === currentUser.username || s.mentor === currentUser.username) && s.status === 'confirmed')
+            const upcomingSessions = sessionsData
+                .filter(s => (s.student_id === currentUser.id || s.mentor_id === currentUser.id) && s.status === 'confirmed')
                 .slice(0, 3);
-            
             document.getElementById('upcomingSessions').innerHTML = upcomingSessions.length ? upcomingSessions.map(s => `
                 <div style="padding: 10px 0; border-bottom: 1px solid #eee;">
                     <div style="font-weight: 600;">${s.subject}</div>
-                    <div style="font-size: 14px; color: #666;">${new Date(s.date).toLocaleString()}</div>
+                    <div style="font-size: 14px; color: #666;">${new Date(s.date_time).toLocaleString()}</div>
                 </div>
             `).join('') : '<p style="color: #666;">Нет ближайших занятий</p>';
 
-            const userMaterials = materials.filter(m => m.author === currentUser.username).slice(0, 3);
+            const userMaterials = materialsData.filter(m => m.author_id === currentUser.id).slice(0, 3);
             document.getElementById('recentMaterials').innerHTML = userMaterials.length ? userMaterials.map(m => `
                 <div style="padding: 10px 0; border-bottom: 1px solid #eee;">
                     <div style="font-weight: 600;">${m.title}</div>
                     <div style="font-size: 14px; color: #666;">⭐ ${m.rating || 0}</div>
                 </div>
             `).join('') : '<p style="color: #666;">У вас пока нет материалов</p>';
-            
             document.getElementById('materialsCount').textContent = userMaterials.length;
 
-            const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
-            const sortedByRating = [...allUsers].sort((a, b) => (b.rating || 0) - (a.rating || 0));
-            const userRank = sortedByRating.findIndex(u => u.username === currentUser.username) + 1;
-            
+            const sortedByRating = [...allUsers].sort((a, b) => (b.thanks_count || 0) - (a.thanks_count || 0));
+            const userRank = sortedByRating.findIndex(u => u.id === currentUser.id) + 1;
             document.getElementById('userRank').textContent = `#${userRank}`;
             document.getElementById('bestRank').textContent = `#${Math.min(userRank, 3)}`;
-            
             const stars = '★'.repeat(Math.floor(currentUser.rating || 0)) + '☆'.repeat(5 - Math.floor(currentUser.rating || 0));
             document.getElementById('ratingStars').textContent = stars;
         }
 
         function updateHistoryTab() {
-            const history = JSON.parse(localStorage.getItem(`test_history_${currentUser.username}`) || '[]');
+            const history = historyData || [];
             const container = document.getElementById('fullHistory');
-
             if (history.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
@@ -1116,26 +1139,24 @@
                 `;
                 return;
             }
-
             const sorted = [...history].reverse();
             container.innerHTML = sorted.map(h => `
                 <div class="history-item">
                     <div class="history-header">
-                        <span class="history-title">${h.testTitle}</span>
+                        <span class="history-title">${h.test_title}</span>
                         <span class="history-score">${h.score}%</span>
                     </div>
                     <div class="history-meta">
-                        <span>📅 ${new Date(h.date).toLocaleString()}</span>
-                        <span>✅ ${h.correct}/${h.total}</span>
-                        <span class="history-points">+${h.earned} баллов</span>
+                        <span>📅 ${new Date(h.completed_at).toLocaleString()}</span>
+                        <span>✅ ${h.correct_answers}/${h.total_questions}</span>
+                        <span class="history-points">+${h.earned_points} баллов</span>
                     </div>
                 </div>
             `).join('');
         }
 
         function updateSessionsTab() {
-            const userSessions = sessions.filter(s => s.student === currentUser.username || s.mentor === currentUser.username);
-            
+            const userSessions = sessionsData.filter(s => s.student_id === currentUser.id || s.mentor_id === currentUser.id);
             if (!userSessions.length) {
                 document.getElementById('sessionsList').innerHTML = `
                     <div class="empty-state">
@@ -1147,11 +1168,9 @@
                 `;
                 return;
             }
-
             const sessionsHtml = userSessions.map(s => {
-                const isMentor = s.mentor === currentUser.username;
-                const otherPerson = isMentor ? s.student : s.mentor;
-                
+                const isMentor = s.mentor_id === currentUser.id;
+                const otherPerson = isMentor ? s.student_name : s.mentor_name;
                 return `
                     <div class="card">
                         <div class="card-header">
@@ -1160,7 +1179,7 @@
                         </div>
                         <div class="card-body">
                             <div class="card-meta">
-                                <span>📅 ${new Date(s.date).toLocaleString()}</span>
+                                <span>📅 ${new Date(s.date_time).toLocaleString()}</span>
                                 <span>⏱ ${s.duration} мин</span>
                             </div>
                             <div style="margin-top: 10px;">
@@ -1172,20 +1191,15 @@
                             ${s.status === 'pending' ? `
                                 <button class="btn btn-secondary" onclick="cancelSession('${s.id}')">Отменить</button>
                             ` : ''}
-                            ${s.status === 'completed' && !s.reviewed ? `
-                                <button class="btn btn-primary" onclick="leaveReview('${s.id}')">Оставить отзыв</button>
-                            ` : ''}
                         </div>
                     </div>
                 `;
             }).join('');
-            
             document.getElementById('sessionsList').innerHTML = sessionsHtml;
         }
 
         function updateMaterialsTab() {
-            const userMaterials = materials.filter(m => m.author === currentUser.username);
-            
+            const userMaterials = materialsData.filter(m => m.author_id === currentUser.id);
             if (!userMaterials.length) {
                 document.getElementById('materialsList').innerHTML = `
                     <div class="empty-state">
@@ -1197,7 +1211,6 @@
                 `;
                 return;
             }
-
             const materialsHtml = userMaterials.map(m => `
                 <div class="card">
                     <div class="card-header">
@@ -1217,7 +1230,6 @@
                     </div>
                 </div>
             `).join('');
-            
             document.getElementById('materialsList').innerHTML = materialsHtml;
         }
 
@@ -1225,22 +1237,17 @@
             document.getElementById('editEmail').value = currentUser.email || '';
             document.getElementById('editPhone').value = currentUser.phone || '';
             document.getElementById('editBio').value = currentUser.bio || '';
-            
             if (currentUser.role === 'mentor') {
                 document.getElementById('mentorSettings').style.display = 'block';
-                document.getElementById('editPrice').value = currentUser.price || '';
-                document.getElementById('editEducation').value = currentUser.education || '';
-                document.getElementById('editExperience').value = currentUser.experience || '';
-                
                 const subjectsHtml = `
-                    <div class="subject-tag"><input type="checkbox" value="math" ${currentUser.subjects?.includes('math') ? 'checked' : ''}> Математика</div>
-                    <div class="subject-tag"><input type="checkbox" value="physics" ${currentUser.subjects?.includes('physics') ? 'checked' : ''}> Физика</div>
-                    <div class="subject-tag"><input type="checkbox" value="chemistry" ${currentUser.subjects?.includes('chemistry') ? 'checked' : ''}> Химия</div>
-                    <div class="subject-tag"><input type="checkbox" value="biology" ${currentUser.subjects?.includes('biology') ? 'checked' : ''}> Биология</div>
-                    <div class="subject-tag"><input type="checkbox" value="history" ${currentUser.subjects?.includes('history') ? 'checked' : ''}> История</div>
-                    <div class="subject-tag"><input type="checkbox" value="literature" ${currentUser.subjects?.includes('literature') ? 'checked' : ''}> Литература</div>
-                    <div class="subject-tag"><input type="checkbox" value="geography" ${currentUser.subjects?.includes('geography') ? 'checked' : ''}> География</div>
-                    <div class="subject-tag"><input type="checkbox" value="informatics" ${currentUser.subjects?.includes('informatics') ? 'checked' : ''}> Информатика</div>
+                    <div class="subject-tag"><input type="checkbox" value="math" ${(currentUser.subjects || []).includes('math') ? 'checked' : ''}> Математика</div>
+                    <div class="subject-tag"><input type="checkbox" value="physics" ${(currentUser.subjects || []).includes('physics') ? 'checked' : ''}> Физика</div>
+                    <div class="subject-tag"><input type="checkbox" value="chemistry" ${(currentUser.subjects || []).includes('chemistry') ? 'checked' : ''}> Химия</div>
+                    <div class="subject-tag"><input type="checkbox" value="biology" ${(currentUser.subjects || []).includes('biology') ? 'checked' : ''}> Биология</div>
+                    <div class="subject-tag"><input type="checkbox" value="history" ${(currentUser.subjects || []).includes('history') ? 'checked' : ''}> История</div>
+                    <div class="subject-tag"><input type="checkbox" value="literature" ${(currentUser.subjects || []).includes('literature') ? 'checked' : ''}> Литература</div>
+                    <div class="subject-tag"><input type="checkbox" value="geography" ${(currentUser.subjects || []).includes('geography') ? 'checked' : ''}> География</div>
+                    <div class="subject-tag"><input type="checkbox" value="informatics" ${(currentUser.subjects || []).includes('informatics') ? 'checked' : ''}> Информатика</div>
                 `;
                 document.getElementById('editSubjects').innerHTML = subjectsHtml;
             }
@@ -1249,167 +1256,134 @@
         function switchTab(tabName) {
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            
             event.target.classList.add('active');
             document.getElementById(`tab-${tabName}`).classList.add('active');
         }
 
-        function editProfile() {
-            switchTab('settings');
-        }
+        function editProfile() { switchTab('settings'); }
 
-        function saveProfile(event) {
+        async function saveProfile(event) {
             event.preventDefault();
-            
-            currentUser.email = document.getElementById('editEmail').value;
-            currentUser.phone = document.getElementById('editPhone').value;
-            currentUser.bio = document.getElementById('editBio').value;
-            
-            if (currentUser.role === 'mentor') {
-                currentUser.price = document.getElementById('editPrice').value;
-                currentUser.education = document.getElementById('editEducation').value;
-                currentUser.experience = document.getElementById('editExperience').value;
-                
-                const subjects = [];
-                document.querySelectorAll('#editSubjects input:checked').forEach(cb => {
-                    subjects.push(cb.value);
+            const subjects = [];
+            document.querySelectorAll('#editSubjects input:checked').forEach(cb => subjects.push(cb.value));
+            const updatedData = {
+                phone: document.getElementById('editPhone').value,
+                bio: document.getElementById('editBio').value,
+                subjects: subjects
+            };
+            try {
+                const response = await fetch('/api/profile', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': authToken },
+                    body: JSON.stringify(updatedData)
                 });
-                currentUser.subjects = subjects;
-            }
-            
-            const users = JSON.parse(localStorage.getItem('users') || '[]');
-            const userIndex = users.findIndex(u => u.username === currentUser.username);
-            if (userIndex !== -1) {
-                users[userIndex] = currentUser;
-                localStorage.setItem('users', JSON.stringify(users));
-                localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            }
-            
-            showNotification('Профиль обновлен', 'success');
-            updateProfileUI();
+                if (response.ok) {
+                    currentUser.phone = updatedData.phone;
+                    currentUser.bio = updatedData.bio;
+                    if (currentUser.role === 'mentor') currentUser.subjects = subjects;
+                    showNotification('Профиль обновлен', 'success');
+                    updateProfileUI();
+                } else {
+                    showNotification('Ошибка обновления', 'error');
+                }
+            } catch(e) { showNotification('Ошибка', 'error'); }
         }
 
-        function changePassword(event) {
+        async function changePassword(event) {
             event.preventDefault();
-            
             const current = document.getElementById('currentPassword').value;
             const newPass = document.getElementById('newPassword').value;
             const confirm = document.getElementById('confirmPassword').value;
-            
-            if (current !== currentUser.password) {
-                showNotification('Неверный текущий пароль', 'error');
-                return;
-            }
-            
-            if (newPass !== confirm) {
-                showNotification('Пароли не совпадают', 'error');
-                return;
-            }
-            
-            if (newPass.length < 6) {
-                showNotification('Пароль должен быть не менее 6 символов', 'error');
-                return;
-            }
-            
-            currentUser.password = newPass;
-            
-            const users = JSON.parse(localStorage.getItem('users') || '[]');
-            const userIndex = users.findIndex(u => u.username === currentUser.username);
-            if (userIndex !== -1) {
-                users[userIndex].password = newPass;
-                localStorage.setItem('users', JSON.stringify(users));
-                localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            }
-            
-            showNotification('Пароль успешно изменен', 'success');
-            document.getElementById('passwordForm').reset();
+            if (newPass !== confirm) { showNotification('Пароли не совпадают', 'error'); return; }
+            if (newPass.length < 6) { showNotification('Пароль должен быть не менее 6 символов', 'error'); return; }
+            try {
+                const response = await fetch('/api/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': authToken },
+                    body: JSON.stringify({ current_password: current, new_password: newPass })
+                });
+                if (response.ok) {
+                    showNotification('Пароль изменен', 'success');
+                    document.getElementById('passwordForm').reset();
+                } else {
+                    showNotification('Неверный текущий пароль', 'error');
+                }
+            } catch(e) { showNotification('Ошибка', 'error'); }
         }
 
-        function createSession() {
-            document.getElementById('sessionModal').style.display = 'flex';
-        }
+        function createSession() { document.getElementById('sessionModal').style.display = 'flex'; }
+        function closeModal() { document.getElementById('sessionModal').style.display = 'none'; }
 
-        function closeModal() {
-            document.getElementById('sessionModal').style.display = 'none';
-        }
-
-        function saveSession(event) {
+        async function saveSession(event) {
             event.preventDefault();
-            
-            const session = {
-                id: Date.now().toString(),
+            const sessionData = {
                 subject: document.getElementById('sessionSubject').value,
-                date: document.getElementById('sessionDate').value,
+                student_id: currentUser.role === 'student' ? currentUser.id : null,
+                mentor_id: currentUser.role === 'mentor' ? currentUser.id : null,
+                date_time: document.getElementById('sessionDate').value,
                 duration: document.getElementById('sessionDuration').value,
-                notes: document.getElementById('sessionNotes').value,
-                student: currentUser.role === 'student' ? currentUser.username : '',
-                mentor: currentUser.role === 'mentor' ? currentUser.username : '',
-                status: 'pending',
-                created: new Date().toISOString()
+                notes: document.getElementById('sessionNotes').value
             };
-            
-            if (currentUser.role === 'student') {
-                session.student = currentUser.username;
-                session.mentor = 'pending';
-            } else {
-                session.mentor = currentUser.username;
-                session.student = 'pending';
-            }
-            
-            sessions.push(session);
-            localStorage.setItem('sessions', JSON.stringify(sessions));
-            
-            showNotification('Занятие создано', 'success');
-            closeModal();
-            updateSessionsTab();
+            try {
+                const response = await fetch('/api/sessions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': authToken },
+                    body: JSON.stringify(sessionData)
+                });
+                if (response.ok) {
+                    showNotification('Занятие создано', 'success');
+                    closeModal();
+                    const res = await fetch('/api/sessions', { headers: { 'Authorization': authToken } });
+                    if (res.ok) sessionsData = await res.json();
+                    updateSessionsTab();
+                } else {
+                    showNotification('Ошибка', 'error');
+                }
+            } catch(e) { showNotification('Ошибка', 'error'); }
         }
 
-        function cancelSession(sessionId) {
-            const session = sessions.find(s => s.id === sessionId);
-            if (session && confirm('Отменить занятие?')) {
-                session.status = 'cancelled';
-                localStorage.setItem('sessions', JSON.stringify(sessions));
-                showNotification('Занятие отменено', 'info');
-                updateSessionsTab();
-            }
+        async function cancelSession(sessionId) {
+            if (!confirm('Отменить занятие?')) return;
+            try {
+                const response = await fetch(`/api/sessions/${sessionId}/cancel`, {
+                    method: 'POST',
+                    headers: { 'Authorization': authToken }
+                });
+                if (response.ok) {
+                    showNotification('Занятие отменено', 'info');
+                    const res = await fetch('/api/sessions', { headers: { 'Authorization': authToken } });
+                    if (res.ok) sessionsData = await res.json();
+                    updateSessionsTab();
+                }
+            } catch(e) {}
         }
 
         function uploadMaterial() {
             const title = prompt('Введите название материала:');
             if (!title) return;
-            
             const type = confirm('Видеоурок? (OK - видео, Отмена - конспект)') ? 'video' : 'conspect';
-            
             const material = {
                 id: Date.now().toString(),
                 title: title,
                 type: type,
-                author: currentUser.username,
-                description: 'Описание материала',
-                rating: 0,
-                views: 0,
-                created: new Date().toISOString()
+                description: 'Описание материала'
             };
-            
-            materials.push(material);
-            localStorage.setItem('materials', JSON.stringify(materials));
-            
             showNotification('Материал загружен и отправлен на модерацию', 'success');
             updateMaterialsTab();
         }
 
-        function deleteMaterial(materialId) {
-            if (confirm('Удалить материал?')) {
-                materials = materials.filter(m => m.id !== materialId);
-                localStorage.setItem('materials', JSON.stringify(materials));
-                showNotification('Материал удален', 'info');
-                updateMaterialsTab();
-            }
+        function editMaterial(id) { showNotification('Редактирование временно недоступно', 'info'); }
+        function deleteMaterial(id) {
+            if (!confirm('Удалить материал?')) return;
+            materialsData = materialsData.filter(m => m.id !== id);
+            localStorage.setItem('materials', JSON.stringify(materialsData));
+            showNotification('Материал удален', 'info');
+            updateMaterialsTab();
         }
 
         function logout() {
             if (confirm('Выйти из аккаунта?')) {
-                localStorage.removeItem('currentUser');
+                localStorage.removeItem('token');
                 window.location.href = 'rep1.html';
             }
         }
@@ -1417,25 +1391,13 @@
         function showNotification(message, type = 'info') {
             const notification = document.createElement('div');
             notification.className = `notification ${type}`;
-            notification.innerHTML = `
-                <span>${message}</span>
-                <button class="notification-close" onclick="this.parentElement.remove()">×</button>
-            `;
-            
+            notification.innerHTML = `<span>${message}</span><button class="notification-close" onclick="this.parentElement.remove()">×</button>`;
             document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.remove();
-            }, 3000);
+            setTimeout(() => notification.remove(), 3000);
         }
 
         function getStatusText(status) {
-            const statuses = {
-                'pending': 'Ожидает',
-                'confirmed': 'Подтверждено',
-                'completed': 'Завершено',
-                'cancelled': 'Отменено'
-            };
+            const statuses = { 'pending': 'Ожидает', 'confirmed': 'Подтверждено', 'completed': 'Завершено', 'cancelled': 'Отменено' };
             return statuses[status] || status;
         }
     </script>
