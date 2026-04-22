@@ -2,7 +2,6 @@
 -- School Help Database Schema
 -- =============================================
 
--- 1. Пользователи
 CREATE TABLE users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
@@ -16,7 +15,6 @@ CREATE TABLE users (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. Наставники (дополнительная информация)
 CREATE TABLE mentors (
     user_id INTEGER PRIMARY KEY,
     price_per_hour INTEGER DEFAULT 0,
@@ -25,7 +23,6 @@ CREATE TABLE mentors (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- 3. Предметы наставников
 CREATE TABLE mentor_subjects (
     mentor_id INTEGER,
     subject TEXT CHECK(subject IN ('math', 'physics', 'chemistry', 'biology', 'history', 'literature', 'geography', 'informatics')),
@@ -33,7 +30,6 @@ CREATE TABLE mentor_subjects (
     FOREIGN KEY (mentor_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- 4. Тесты
 CREATE TABLE tests (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
@@ -46,7 +42,6 @@ CREATE TABLE tests (
     FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
--- 5. Вопросы к тестам
 CREATE TABLE questions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     test_id INTEGER NOT NULL,
@@ -59,7 +54,6 @@ CREATE TABLE questions (
     FOREIGN KEY (test_id) REFERENCES tests(id) ON DELETE CASCADE
 );
 
--- 6. История прохождения тестов
 CREATE TABLE test_results (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
@@ -73,7 +67,6 @@ CREATE TABLE test_results (
     FOREIGN KEY (test_id) REFERENCES tests(id)
 );
 
--- 7. Материалы (конспекты и видео)
 CREATE TABLE materials (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
@@ -83,8 +76,8 @@ CREATE TABLE materials (
     author_id INTEGER NOT NULL,
     file_name TEXT,
     file_size REAL,
-    duration INTEGER,  -- для видео (минуты)
-    pages INTEGER,    -- для конспектов
+    duration INTEGER,
+    pages INTEGER,
     views INTEGER DEFAULT 0,
     rating REAL DEFAULT 0,
     status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected')),
@@ -92,14 +85,13 @@ CREATE TABLE materials (
     FOREIGN KEY (author_id) REFERENCES users(id)
 );
 
--- 8. Занятия (сессии)
 CREATE TABLE sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     subject TEXT NOT NULL,
     student_id INTEGER NOT NULL,
     mentor_id INTEGER NOT NULL,
     date_time DATETIME NOT NULL,
-    duration INTEGER DEFAULT 60,  -- минуты
+    duration INTEGER DEFAULT 60,
     notes TEXT,
     status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'confirmed', 'completed', 'cancelled')),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -107,7 +99,6 @@ CREATE TABLE sessions (
     FOREIGN KEY (mentor_id) REFERENCES users(id)
 );
 
--- 9. Отзывы на занятия
 CREATE TABLE reviews (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     session_id INTEGER NOT NULL,
@@ -119,7 +110,6 @@ CREATE TABLE reviews (
     FOREIGN KEY (reviewer_id) REFERENCES users(id)
 );
 
--- 10. Благодарности (лайки наставникам)
 CREATE TABLE thanks (
     user_id INTEGER NOT NULL,
     mentor_id INTEGER NOT NULL,
@@ -129,7 +119,6 @@ CREATE TABLE thanks (
     FOREIGN KEY (mentor_id) REFERENCES users(id)
 );
 
--- 11. Баллы пользователей
 CREATE TABLE user_points (
     user_id INTEGER PRIMARY KEY,
     balance INTEGER DEFAULT 0,
@@ -137,7 +126,6 @@ CREATE TABLE user_points (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
--- 12. Достижения
 CREATE TABLE achievements (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -146,7 +134,6 @@ CREATE TABLE achievements (
     required_points INTEGER
 );
 
--- 13. Полученные достижения
 CREATE TABLE user_achievements (
     user_id INTEGER,
     achievement_id INTEGER,
@@ -155,10 +142,6 @@ CREATE TABLE user_achievements (
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (achievement_id) REFERENCES achievements(id)
 );
-
--- =============================================
--- Индексы для быстрого поиска
--- =============================================
 
 CREATE INDEX idx_users_role ON users(role);
 CREATE INDEX idx_users_rating ON users(rating DESC);

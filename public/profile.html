@@ -1366,13 +1366,22 @@
                 id: Date.now().toString(),
                 title: title,
                 type: type,
-                description: 'Описание материала'
+                author_id: currentUser.id,
+                description: 'Описание материала',
+                rating: 0,
+                views: 0,
+                created: new Date().toISOString()
             };
+            materialsData.push(material);
+            localStorage.setItem('materials', JSON.stringify(materialsData));
             showNotification('Материал загружен и отправлен на модерацию', 'success');
             updateMaterialsTab();
         }
 
-        function editMaterial(id) { showNotification('Редактирование временно недоступно', 'info'); }
+        function editMaterial(id) {
+            showNotification('Редактирование временно недоступно', 'info');
+        }
+
         function deleteMaterial(id) {
             if (!confirm('Удалить материал?')) return;
             materialsData = materialsData.filter(m => m.id !== id);
